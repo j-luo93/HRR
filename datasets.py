@@ -14,7 +14,7 @@ UNK_ID = 3
 class Vocab(object):
 
     # TODO add frequency filtering
-    def __init__(self, dataset, path, size):
+    def __init__(self, path, size):
         if os.path.isfile(path):
             vocab = list()
             with codecs.open(path, 'r', 'utf8') as fin:
@@ -22,17 +22,11 @@ class Vocab(object):
                     w, c = line.strip().split('\t')
                     vocab.append(w)
         else:
-            cnt = Counter()
-            for sent in dataset:
-                for token in sent:
-                    cnt[token] += 1
-            cnt = sorted(cnt.items(), key=lambda x: x[1], reverse=True)
-            vocab = zip(*cnt)[0]
+            raise ValueError('cannot find vocab file at %s' %path)
         if size > 0:
             vocab = vocab[:size]
         self.w2i = dict(zip(vocab, range(len(vocab))))
         self.i2w = {i: w for w, i in self.w2i.items()}
-        print(self.w2i)
 
     def indexify(self, sent):
         return map(lambda token: self.w2i.get(token, UNK_ID), sent)
@@ -55,7 +49,7 @@ class Datasets(object):
         dev_dataset = Dataset(dev_path)
         test_dataset = Dataset(test_path)
 
-        self.vocab = Vocab(train_dataset, vocab_path, self.vocab_size)
+        self.vocab = Vocab(vocab_path, self.vocab_size)
         self.data = {'train': train_dataset, 'dev': dev_dataset, 'test': test_dataset}
         for split, dataset in self.data.items():
             dataset._indexify(self.vocab)

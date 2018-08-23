@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import tensorflow as tf
 
@@ -13,7 +13,6 @@ class Trainer(object):
 
             # TODO add saving and loading support
             max_step = len(datasets) // self.batch_size * self.num_epochs
-
             sess.run(tf.global_variables_initializer())
             for step in range(max_step):
                 batch = datasets.get_random_batch(self.batch_size)
