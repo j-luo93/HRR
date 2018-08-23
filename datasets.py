@@ -6,6 +6,8 @@ import numpy as np
 
 from collections import Counter
 
+from utils import Map
+
 PAD_ID = 0
 SOS_ID = 1
 EOS_ID = 2
@@ -62,12 +64,24 @@ class Datasets(object):
     def get_random_batch(self, batch_size):
         return self.data['train'].get_random_batch(batch_size)
 
-class Batch(object):
+    def __getitem__(self, key):
+        return self.data[key]
 
-    def __init__(self, ids, targets):
-        self.ids = ids
-        self.targets = targets
+class DatasetIterator(object):
 
+    def __init__(self, dataset, batch_size):
+        self.dataset = dataset
+        assert not dataset.bucketified and dataset.indexified
+        self.batch_size = batch_size
+        self.next_batch_id = 0
+
+    def __iter__(self):
+        max_id = len(self.dataset)
+        while self.next_batch_id < max_id:
+            batch_ids = range(self.next_batch_id, min(self.next_batch_id + self.batch_size, max_id))
+            self.next_batch_id = batch_ids[-1] + 1
+            yield self.dataset._get_batch(None, batch_ids)
+        
 class Dataset(object):
 
     def __init__(self, path):
@@ -94,7 +108,11 @@ class Dataset(object):
         return batch
 
     def _get_batch(self, bucket_id, batch_ids):
-        raw = [self.data[bucket_id][i] for i in batch_ids]
+        if bucket_id is None:
+            raw = [self.data[i] for i in batch_ids]
+        else:
+            raw = [self.data[bucket_id][i] for i in batch_ids]
+
         max_l = max(map(len, raw)) + 1
         ids = list()
         targets = list()
@@ -107,11 +125,8 @@ class Dataset(object):
         for d in raw:
             ids.append(pad([SOS_ID] + d, max_l))
             targets.append(pad(d + [EOS_ID], max_l))
-        return Batch(np.asarray(ids), np.asarray(targets))
-
-    def __iter__(self):
-        for sent in self.data:
-            yield sent
+        batch = Map(ids=ids, targets=targets)
+        return batch
 
     def _indexify(self, vocab):
         assert not self.indexified

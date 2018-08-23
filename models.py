@@ -8,6 +8,7 @@ class BaseModel(object):
         self._get_params(**kwargs)
         self._build_forward()
         self._build_backward()
+        self.summary_op = tf.summary.merge_all()
 
     def _build_forward(self):
         raise NotImplemented()
@@ -50,8 +51,9 @@ class BaseLM(BaseModel):
             logits = self.emb(output, predict=True)
             log_probs = tf.nn.log_softmax(logits)
             losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=tf.reshape(target_ids, [-1]))
-            num_words = tf.reduce_sum(tf.to_float(target_ids > 0))
-            self.loss = tf.reduce_sum(losses) / num_words
+            self.num_words = tf.reduce_sum(tf.to_float(target_ids > 0))
+            self.loss = tf.reduce_sum(losses) / self.num_words
+            tf.summary.scalar('loss', self.loss)
 
     def _build_backward(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr)
