@@ -80,7 +80,10 @@ class Dataset(object):
                 self.data.append(sent)
 
     def __len__(self):
-        return len(self.data)
+        if self.bucketified:
+            return sum(map(len, self.data))
+        else:
+            return len(self.data)
 
     def get_random_batch(self, batch_size):
         assert self.indexified

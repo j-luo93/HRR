@@ -1,5 +1,5 @@
 # TODOs
 
--[x] framework
--[ ] baseline test
--[ ] saving and loading
+- [x] framework
+- [ ] baseline test
+- [ ] saving and loading
