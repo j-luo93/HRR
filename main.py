@@ -4,7 +4,7 @@ import os
 import argparse
 from datetime import datetime
 from pprint import pprint
-from models import BaseLM
+from models import BaseLM, HRRWordLM
 from datasets import Datasets
 from trainer import Trainer
 
@@ -18,6 +18,8 @@ def parse_args():
     parser.add_argument('--batch_size', '-bs', metavar='', default=128, type=int, help='batch size')
     parser.add_argument('--model', '-m', metavar='', default='base', type=str, help='model type')
     parser.add_argument('--vocab_size', '-vs', metavar='', default=0, type=int, help='vocabulary size')
+    parser.add_argument('--num_roles', '-nr', metavar='', default=2, type=int, help='number of roles')
+    parser.add_argument('--num_fillers', '-nf', metavar='', default=50, type=int, help='number of fillers')
     parser.add_argument('--keep_prob', '-kp', metavar='', default=0.5, type=float, help='keep prob for dropout')
     parser.add_argument('--sample_size', '-ss', metavar='', default=0, type=int, help='sample size for sampled softmax')
     parser.add_argument('--gpu', '-g', metavar='', default='', nargs='+', help='which gpu(s) to use')
@@ -27,7 +29,7 @@ def parse_args():
     parser.add_argument('-untied_io', dest='tied_io', action='store_false', help='untie input and output embeddings')
 
     args = parser.parse_args()
-    assert args.model in ['baseLM'], 'model type not supported or implemented'
+    assert args.model in ['baseline', 'HRR_word'], 'model type not supported or implemented'
 
 	# set up log directory
     now = datetime.now()
@@ -43,8 +45,12 @@ def parse_args():
     return args
 
 def construct_model(args):
-    if args.model == 'baseLM':
-        model = BaseLM(**vars(args))
+    if args.model == 'baseline':
+        model_cls = BaseLM
+    elif args.model == 'HRR_word':
+        model_cls = HRRWordLM
+
+    model = model_cls(**vars(args))
     return model
 
 def prepare_datasets(args):

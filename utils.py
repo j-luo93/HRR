@@ -24,3 +24,20 @@ def initialize_op(variable):
 
 def ndim(tensor):
     return len(tensor.get_shape())
+
+
+def circular_conv(a, b):
+    with tf.name_scope('circular_conv'):
+        a_fft = tf.fft(tf.complex(a, 0.0))
+        b_fft = tf.fft(tf.complex(b, 0.0))
+        ifft = tf.ifft(a_fft * b_fft)
+        res = tf.cast(tf.real(ifft), 'float32')
+    return res
+
+def circular_corr(a, b):
+    with tf.name_scope('circular_corr'):
+        a_fft = tf.conj(tf.fft(tf.complex(a, 0.0)))
+        b_fft = tf.fft(tf.complex(b, 0.0))
+        ifft = tf.ifft(a_fft * b_fft)
+        res = tf.cast(tf.real(ifft), 'float32')
+    return res

@@ -1,11 +1,12 @@
 import tensorflow as tf
 
-from layers import EmbeddingLayer, TiedIOEmbedding, LSTM
+from layers import EmbeddingLayer, TiedIOEmbedding, LSTM, HRRWordEmbedding
 
 class BaseModel(object):
 
     def __init__(self, **kwargs):
         self._get_params(**kwargs)
+        self._build_layers()
         self._build_forward()
         self._build_backward()
         self.summary_op = tf.summary.merge_all()
@@ -33,6 +34,11 @@ class BaseLM(BaseModel):
         assert self.tied_io
         assert self.sample_size == 0
 
+    def _build_layers(self):
+        emb_cls = TiedIOEmbedding if self.tied_io else EmbeddingLayer
+        self.emb = emb_cls(self.vocab_size, self.cell_dim)
+        self.rnn = LSTM(self.num_layers, self.cell_dim, keep_prob=self.keep_prob)
+
     def _build_forward(self):
         self._inputs = {}
         input_ids = tf.placeholder(tf.int32, shape=[None, None], name='input_ids') # size: bs x sl
@@ -42,9 +48,6 @@ class BaseLM(BaseModel):
 
         bs, sl = input_ids.get_shape()
 
-        emb_cls = TiedIOEmbedding if self.tied_io else EmbeddingLayer
-        self.emb = TiedIOEmbedding(self.vocab_size, self.cell_dim)
-        self.rnn = LSTM(self.num_layers, self.cell_dim, keep_prob=self.keep_prob)
 
         with tf.name_scope('forward'):
             e = self.emb(input_ids)
@@ -63,3 +66,16 @@ class BaseLM(BaseModel):
         grads, norm = tf.clip_by_global_norm(grads, 5.0) # gradient clipping
         grads_and_vars = zip(grads, tf.trainable_variables())
         self.train_op = self.optimizer.apply_gradients(grads_and_vars)
+
+class HRRWordLM(BaseLM):
+
+    def _get_params(self, **kwargs):
+        super(HRRWordLM, self)._get_params(**kwargs)
+        assert self.tied_io
+
+        self.num_roles = kwargs['num_roles']
+        self.num_fillers = kwargs['num_fillers']
+
+    def _build_layers(self):
+        self.emb = HRRWordEmbedding(self.vocab_size, self.cell_dim, self.num_roles, self.num_fillers)
+        self.rnn = LSTM(self.num_layers, self.cell_dim, keep_prob=self.keep_prob)
