@@ -25,7 +25,7 @@ class EmbeddingLayer(BaseLayer):
 
 class TiedIOEmbedding(EmbeddingLayer):
 
-    def __init__(self, vocab_size, dim, use_bias=False):
+    def __init__(self, vocab_size, dim, use_bias=True):#False):
         super(TiedIOEmbedding, self).__init__(vocab_size, dim)
         self.use_bias = use_bias
         if self.use_bias:
@@ -44,12 +44,13 @@ class TiedIOEmbedding(EmbeddingLayer):
 
 class LSTM(BaseLayer):
 
-    def __init__(self, num_layers, dim):
+    def __init__(self, num_layers, dim, keep_prob=1.0):
         self.num_layers = num_layers
         self.dim = dim
 
         with tf.variable_scope('lstm_cell'):
             cells = [tf.nn.rnn_cell.LSTMCell(self.dim) for _ in range(self.num_layers)]
+            cells = [tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=keep_prob) for cell in cells]
             self.cell = tf.nn.rnn_cell.MultiRNNCell(cells)
 
     def forward(self, input_):

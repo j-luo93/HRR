@@ -26,6 +26,7 @@ class BaseLM(BaseModel):
         self.num_layers = kwargs['num_layers']
         self.cell_dim = kwargs['cell_dim']
         self.vocab_size = kwargs['vocab_size']
+        self.keep_prob = kwargs['keep_prob']
         self.tied_io = kwargs['tied_io']
         self.sample_size = kwargs['sample_size']
         self.lr = kwargs['learning_rate']
@@ -43,17 +44,18 @@ class BaseLM(BaseModel):
 
         emb_cls = TiedIOEmbedding if self.tied_io else EmbeddingLayer
         self.emb = TiedIOEmbedding(self.vocab_size, self.cell_dim)
-        self.rnn = LSTM(self.num_layers, self.cell_dim)
+        self.rnn = LSTM(self.num_layers, self.cell_dim, keep_prob=self.keep_prob)
 
         with tf.name_scope('forward'):
             e = self.emb(input_ids)
+            e = tf.nn.dropout(e, keep_prob=self.keep_prob)
             output, states = self.rnn(e)
             logits = self.emb(output, predict=True)
             log_probs = tf.nn.log_softmax(logits)
             losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=tf.reshape(target_ids, [-1]))
-            self.num_words = tf.reduce_sum(tf.to_float(target_ids > 0))
-            self.loss = tf.reduce_sum(losses) / self.num_words
-            tf.summary.scalar('loss', self.loss)
+        self.num_words = tf.reduce_sum(tf.to_float(target_ids > 0))
+        self.loss = tf.reduce_sum(losses) / self.num_words
+        tf.summary.scalar('loss', self.loss)
 
     def _build_backward(self):
         self.optimizer = tf.train.AdamOptimizer(self.lr)

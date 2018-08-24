@@ -18,6 +18,7 @@ def parse_args():
     parser.add_argument('--batch_size', '-bs', metavar='', default=128, type=int, help='batch size')
     parser.add_argument('--model', '-m', metavar='', default='base', type=str, help='model type')
     parser.add_argument('--vocab_size', '-vs', metavar='', default=0, type=int, help='vocabulary size')
+    parser.add_argument('--keep_prob', '-kp', metavar='', default=0.5, type=float, help='keep prob for dropout')
     parser.add_argument('--sample_size', '-ss', metavar='', default=0, type=int, help='sample size for sampled softmax')
     parser.add_argument('--gpu', '-g', metavar='', default='', nargs='+', help='which gpu(s) to use')
     parser.add_argument('--print_interval', '-pi', metavar='', default=100, type=int, help='print training info after this many steps')
@@ -31,7 +32,7 @@ def parse_args():
 	# set up log directory
     now = datetime.now()
     date = now.strftime("%m-%d")
-    timestamp = now.strftime("%H:%M:%S")
+    timestamp = now.strftime("%H.%M.%S")
     if not args.msg:
         args.log_dir = 'log/%s/%s' %(date, timestamp)
     else:
@@ -53,7 +54,7 @@ def prepare_datasets(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    pprint(args)
+    pprint(vars(args))
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(args.gpu)
 
