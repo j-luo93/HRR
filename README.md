@@ -1,5 +1,7 @@
 # TODOs
 
 - [x] framework
-- [ ] baseline test
+- [x] baseline test
+- [ ] chunk level
+- [ ] sum across tokens
 - [ ] saving and loading
