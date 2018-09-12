@@ -4,7 +4,7 @@ import os
 import argparse
 from datetime import datetime
 from pprint import pprint
-from models import BaseLM, HRRWordLM
+from models import BaseLM, HRRWordLM, HRRChunkLM
 from datasets import Datasets
 from trainer import Trainer
 
@@ -23,13 +23,13 @@ def parse_args():
     parser.add_argument('--keep_prob', '-kp', metavar='', default=0.5, type=float, help='keep prob for dropout')
     parser.add_argument('--sample_size', '-ss', metavar='', default=0, type=int, help='sample size for sampled softmax')
     parser.add_argument('--gpu', '-g', metavar='', default='', nargs='+', help='which gpu(s) to use')
-    parser.add_argument('--print_interval', '-pi', metavar='', default=100, type=int, help='print training info after this many steps')
+    parser.add_argument('--check_interval', '-ci', metavar='', default=100, type=int, help='print training info after this many steps')
     parser.add_argument('--eval_interval', '-ei', metavar='', default=100, type=int, help='evaluate after this many steps')
     parser.add_argument('--learning_rate', '-lr', metavar='', default=0.0002, type=float, help='learning rate')
     parser.add_argument('-untied_io', dest='tied_io', action='store_false', help='untie input and output embeddings')
 
     args = parser.parse_args()
-    assert args.model in ['baseline', 'HRR_word'], 'model type not supported or implemented'
+    assert args.model in ['baseline', 'HRR_word', 'HRR_chunk'], 'model type not supported or implemented'
 
 	# set up log directory
     now = datetime.now()
@@ -49,6 +49,8 @@ def construct_model(args):
         model_cls = BaseLM
     elif args.model == 'HRR_word':
         model_cls = HRRWordLM
+    elif args.model == 'HRR_chunk':
+        model_cls = HRRChunkLM
 
     model = model_cls(**vars(args))
     return model
