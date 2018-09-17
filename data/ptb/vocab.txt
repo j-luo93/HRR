@@ -1,7 +1,7 @@
-_PAD	0
-_SOS	1
-_EOS	2
-_UNK	3
+<epsilon>	0
+<S>	1
+</S>	2
+<UNK>	3
 '	4
 $	5
 \*	6
