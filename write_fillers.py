@@ -139,6 +139,8 @@ def prepare_all(file_name, vocab_file, vocab_range, num_fillers, model='1b', sep
         fi = np.matmul(s[:vocab_range].reshape([vocab_range, nr, num_fillers])[:, i], F[i])
         _f.append(fi)
     f = np.stack(_f, axis=1)
+    if args.normalize:
+        f = f / (np.linalg.norm(f, axis=-1, keepdims=True) + 1e-8)
     #f = (np.reshape(s[:vocab_range], [vocab_range, 2, num_fillers, 1]) * F).sum(axis=2) # 10000 x 2 x 512
     rf = circular_conv(r, f) # 10000 x 2 x 512
     e = rf.sum(axis=1) # 10000 x 512
@@ -355,6 +357,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_prefix', '-op', help='Output file prefix')
     parser.add_argument('--output_directory', '-od', help='Where to save the output files')
     parser.add_argument('--mode', '-m', help='Can be baseline, e, or f')
+    parser.add_argument('--normalize', '-n', action='store_true', help='Normalize f embeddings to get e embeddings')
     args = parser.parse_args()
 
     assert args.mode in ['baseline', 'e', 'f']
