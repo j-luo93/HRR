@@ -146,7 +146,15 @@ def prepare_all(file_name, vocab_file, vocab_range, num_fillers, model='1b', sep
     
     return Params(s=s, r=r, F=F, f=f, rf=rf, e=e, b=b, w2i=w2i)
   elif mode == 'baseline':
-    e = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/var_0/var' %model, all_tensors=False)
+    total = 0
+    es = list()
+    while True:
+      e = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/var_%d/var' %(model, len(es)), all_tensors=False)
+      es.append(e)
+      total += len(e)
+      if total >= vocab_range:
+          break
+    e = np.concatenate(es, axis=0)
     return Params(e=e, w2i=w2i) 
 
   else:
@@ -304,7 +312,7 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
     f = f[indices]
 
   if decomp:
-    with codecs.open('/tmp/lingvo/saved_embeddings/%s/%s.roles' %(model_name, prefix), 'w', 'utf8') as fr:
+    with codecs.open('saved_embeddings/%s/%s.roles' %(model_name, prefix), 'w', 'utf8') as fr:
       r = model.params.r
       nr, d = r.shape
       fr.write('%d %d\n' %(nr, d))
@@ -312,11 +320,11 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
         fr.write('%s %s\n' %('role-%d' %ri, ' '.join(to_string(r[ri]))))
 
 
-  with codecs.open('/tmp/lingvo/saved_embeddings/%s/%s-v-%d' %(model_name, prefix, size), 'w', 'utf8') as fv:
+  with codecs.open('saved_embeddings/%s/%s-v-%d' %(model_name, prefix, size), 'w', 'utf8') as fv:
     fv.write('word\tset\tnorm\n')
   
-    with codecs.open('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.tsv', 'w', 'utf8') as fout:
-      with codecs.open('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.w2v', 'w', 'utf8') as fw2v:
+    with codecs.open('saved_embeddings/%s/' %model_name + prefix + '.tsv', 'w', 'utf8') as fout:
+      with codecs.open('saved_embeddings/%s/' %model_name + prefix + '.w2v', 'w', 'utf8') as fw2v:
         if decomp:
           for i in xrange(size):
             fout.write('%s\n' %('\t'.join(to_string(f1[i]))))
@@ -364,8 +372,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     assert args.mode in ['baseline', 'e', 'f']
-    #ptb_path = "/tmp/lingvo/HRR/data/ptb-chunk/train.txt"
-    #ptb_path = "/tmp/lingvo/HRR/data/ptb/train.txt"
+    #ptb_path = "HRR/data/ptb-chunk/train.txt"
+    #ptb_path = "HRR/data/ptb/train.txt"
     if args.word_list is not None:
         lst = [l.strip() for l in codecs.open(args.word_list, 'r', 'utf8')]
     else:
@@ -377,13 +385,13 @@ if __name__ == '__main__':
         lst = [x for x, y in sorted(cnt.items(), key=lambda x: x[1], reverse=True)]
 
     # model path
-    #path = '/tmp/lingvo/train/ptb-full-NF250-fixed-decay/train'
-    #path = '/tmp/lingvo/train/ptb-baseline-fixed-decay/train'
+    #path = 'train/ptb-full-NF250-fixed-decay/train'
+    #path = 'train/ptb-baseline-fixed-decay/train'
     # checkpoint number
     suffix = 'ckpt-%08d' %args.checkpoint
     #suffix = 'ckpt-00003285'
-    #vocab_file = '/tmp/lingvo/HRR/data/ptb-chunk/vocab.txt'
-    #vocab_file = '/tmp/lingvo/HRR/data/ptb/vocab.txt'
+    #vocab_file = 'HRR/data/ptb-chunk/vocab.txt'
+    #vocab_file = 'HRR/data/ptb/vocab.txt'
 
     if args.mode != 'baseline':
         mode = 'basic'
