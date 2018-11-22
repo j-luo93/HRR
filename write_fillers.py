@@ -16,7 +16,6 @@ import codecs
 from tensorflow.python import pywrap_tensorflow
 
 
-from tensorflow import gfile
 def print_tensors_in_checkpoint_file(file_name,
                                      tensor_name,
                                      all_tensors,
@@ -64,7 +63,7 @@ def get_predictor(path, suffix):
 def get_vocab(vocab_file):
 
     vocab = list()
-    with gfile.GFile(vocab_file, 'r') as fin:
+    with codecs.open(vocab_file, 'r', 'utf8') as fin:
       for line in fin:
         vocab.append(line.strip().split('\t')[0])
     return vocab
@@ -288,10 +287,11 @@ def run_pipeline(model, text, num_layers):
 
 def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', decomp=True):
   def to_string(x):
-    return map(lambda xx: str(xx), x)
+    return map(lambda xx: '%.4f' %xx, x)
   
   f = getattr(model.params, key)
-  indices = [model.params.w2i.get(w, 3) for w in lst[:vocab_size]]
+  indices = [model.params.w2i[w] for w in lst[:vocab_size]]
+  #indices = [model.params.w2i.get(w, 3) for w in lst[:vocab_size]]
   
   trans = {v: k for k, v in model.params.w2i.items()}
 #   indices = range(size)
@@ -304,7 +304,7 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
     f = f[indices]
 
   if decomp:
-    with gfile.GFile('/tmp/lingvo/saved_embeddings/%s/%s.roles' %(model_name, prefix), 'w') as fr:
+    with codecs.open('/tmp/lingvo/saved_embeddings/%s/%s.roles' %(model_name, prefix), 'w', 'utf8') as fr:
       r = model.params.r
       nr, d = r.shape
       fr.write('%d %d\n' %(nr, d))
@@ -312,11 +312,11 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
         fr.write('%s %s\n' %('role-%d' %ri, ' '.join(to_string(r[ri]))))
 
 
-  with gfile.GFile('/tmp/lingvo/saved_embeddings/%s/%s-v-%d' %(model_name, prefix, size), 'w') as fv:
+  with codecs.open('/tmp/lingvo/saved_embeddings/%s/%s-v-%d' %(model_name, prefix, size), 'w', 'utf8') as fv:
     fv.write('word\tset\tnorm\n')
   
-    with gfile.GFile('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.tsv', 'w') as fout:
-      with gfile.GFile('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.w2v', 'w') as fw2v:
+    with codecs.open('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.tsv', 'w', 'utf8') as fout:
+      with codecs.open('/tmp/lingvo/saved_embeddings/%s/' %model_name + prefix + '.w2v', 'w', 'utf8') as fw2v:
         if decomp:
           for i in xrange(size):
             fout.write('%s\n' %('\t'.join(to_string(f1[i]))))
@@ -350,10 +350,13 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--ptb_train_data_path', '-ptdp', help='Used to extract most frequent words')
+    parser.add_argument('--word_list', '-wl', help='Word list')
     parser.add_argument('--model_path', '-mp', help='Model path')
     parser.add_argument('--checkpoint', '-ckpt', type=int, help='Checkpoint number')
     parser.add_argument('--vocab_path', '-vp', help='Vocab path')
     parser.add_argument('--dim', '-d', type=int, help='Dimensionality of embeddings')
+    parser.add_argument('--write_size', '-ws', type=int, help='How many words to write to file')
+    parser.add_argument('--vocab_size', '-vs', type=int, help='How many words to read as vocab')
     parser.add_argument('--output_prefix', '-op', help='Output file prefix')
     parser.add_argument('--output_directory', '-od', help='Where to save the output files')
     parser.add_argument('--mode', '-m', help='Can be baseline, e, or f')
@@ -363,16 +366,15 @@ if __name__ == '__main__':
     assert args.mode in ['baseline', 'e', 'f']
     #ptb_path = "/tmp/lingvo/HRR/data/ptb-chunk/train.txt"
     #ptb_path = "/tmp/lingvo/HRR/data/ptb/train.txt"
-    cnt = Counter()                                                              
-    with codecs.open(args.ptb_train_data_path, 'r', 'utf8') as fin:
-      for line in fin:
-        for w in line.strip().split():
-          cnt[w] += 1
-    lst = [x for x, y in sorted(cnt.items(), key=lambda x: x[1], reverse=True)]
-
-
-
-
+    if args.word_list is not None:
+        lst = [l.strip() for l in codecs.open(args.word_list, 'r', 'utf8')]
+    else:
+        cnt = Counter()                                                              
+        with codecs.open(args.ptb_train_data_path, 'r', 'utf8') as fin:
+          for line in fin:
+            for w in line.strip().split():
+              cnt[w] += 1
+        lst = [x for x, y in sorted(cnt.items(), key=lambda x: x[1], reverse=True)]
 
     # model path
     #path = '/tmp/lingvo/train/ptb-full-NF250-fixed-decay/train'
@@ -388,8 +390,8 @@ if __name__ == '__main__':
     else:
         mode = 'baseline'
 
-    vocab_size = 10000
-    model_ptb = Model(args.model_path, suffix, args.vocab_path, vocab_size, args.dim, model_name=args.output_directory, mode=mode)
+    assert args.vocab_size >= args.write_size
+    model_ptb = Model(args.model_path, suffix, args.vocab_path, args.vocab_size, args.dim, model_name=args.output_directory, mode=mode)
     #model_ptb = Model(path, suffix, vocab_file, vocab_size, 50, model_name='ptb', mode='baseline')
 
     if args.mode == 'f':
@@ -399,7 +401,7 @@ if __name__ == '__main__':
         key = 'e'
         decomp = False
 
-    write(model_ptb, args.output_prefix, vocab_size=vocab_size, model_name=args.output_directory, key=key, decomp=decomp)
+    write(model_ptb, args.output_prefix, size=args.write_size, vocab_size=args.vocab_size, model_name=args.output_directory, key=key, decomp=decomp)
     #write(model_ptb, 'ptb-full-NF250-e-fixed-decay', vocab_size=vocab_size, model_name='ptb-chunk', key='e', decomp=False)
     #write(model_ptb, 'ptb-full-NF250-fixed-decay', vocab_size=vocab_size, model_name='ptb-chunk')
     #write(model_ptb, 'ptb-baseline-fixed-decay', vocab_size=vocab_size, model_name='ptb', key='e', decomp=False)
