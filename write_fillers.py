@@ -127,7 +127,15 @@ def prepare_all(file_name, vocab_file, vocab_range, num_fillers, model='1b', sep
     true_f = circular_corr(rR, np.reshape(e, [vocab_range, 1, -1]))
     return Params(s=s, r=r, F=F, hid_f=f, rf=rf, e=e, b=b, rs=rs, rR=rR, f=true_f, w2i=w2i)
   elif mode == 'basic':
-    s = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/s/var_0/var' %model, all_tensors=False)
+    total = 0
+    all_s = list()
+    while True:
+      s = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/s/var_%d/var' %(model, len(all_s)), all_tensors=False)
+      all_s.append(s)
+      total += len(s)
+      if total >= vocab_range:
+          break
+    s = np.concatenate(all_s, axis=0)
     F = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/F/var' %model, all_tensors=False)
     r = print_tensors_in_checkpoint_file(file_name, tensor_name='%s_word_level_lm/lm/emb/r/var' %model, all_tensors=False)
     
@@ -298,7 +306,7 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
     return map(lambda xx: '%.4f' %xx, x)
   
   f = getattr(model.params, key)
-  indices = [model.params.w2i[w] for w in lst[:vocab_size]]
+  indices = [model.params.w2i[w] for w in filter(lambda w: w != '<unk>', lst[:vocab_size])]
   #indices = [model.params.w2i.get(w, 3) for w in lst[:vocab_size]]
   
   trans = {v: k for k, v in model.params.w2i.items()}
@@ -339,7 +347,7 @@ def write(model, prefix, size=2500, model_name='ptb', vocab_size=9978, key='f', 
             fout.write('%s\n' %('\t'.join(to_string(f[i]))))
             fv.write('%s\te\t%.4f\n' %(trans[indices[i]], np.linalg.norm(f[i])))
 
-        actual_vocab_size = len(indices)
+        actual_vocab_size = size #len(indices)
         dim = f1.shape[-1] if decomp else f.shape[-1]
         multiplier = 2 if decomp else 1
         fw2v.write('%d %d\n' %(actual_vocab_size * multiplier, dim))
